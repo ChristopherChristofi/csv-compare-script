@@ -1,19 +1,26 @@
 @echo off
 Setlocal EnableDelayedExpansion
-set "list1=list1"
-set "list2=list2"
-type nul > %list1%.csv
-type nul > %list2%.csv
-type nul > testnew.csv
-call :reformat new.csv , testnew.csv
-call :extract testnew.csv , %list1%.csv
-call :extract complete.csv , %list2%.csv
-sort /uniq %list1%.csv /o list11.csv
-sort /uniq %list2%.csv /o list22.csv
-for /f %%a in ('fc list11.csv list22.csv ^| find /i "cod"') do (
-echo %%a >> error.csv
-) || ( echo Error in File Read and Comparing Datasets &Exit /b 1 )
+set "new_doc=new"
+set "comp_doc=complete2"
+set "list1=test_list1"
+set "list2=test_list2"
+if exist %new_doc%.csv (
+    type nul > test_new.csv && attrib +h test_new.csv
+    call :reformat %new_doc%.csv , test_new.csv
+) else (( echo File Error: %new_doc%.csv not found. ) && del test_new.csv && pause &exit /b 1 )
+if exist %comp_doc%.csv ( if exist test_new.csv (
+    type nul > %list1%.csv && attrib +h %list1%.csv
+    type nul > %list2%.csv && attrib +h %list2%.csv
+    call :extract test_new.csv , %list1%.csv , "tokens=1 delims=,"
+    call :extract %comp_doc%.csv , %list2%.csv , "skip=1 tokens=1 delims=,"
+    sort /uniq %list1%.csv /o test_list11.csv && attrib +h test_list11.csv
+    sort /uniq %list2%.csv /o test_list22.csv && attrib +h test_list22.csv
+)) else (( echo File Error: %comp_doc%.csv not found. ) && del /A:H test_new.csv && pause &exit /b 1 )
 
+echo Missing codes found: > test_error.csv
+for /f %%a in ('fc test_list11.csv test_list22.csv ^| find /i "cod"') do ( echo %%a >> test_error.csv )
+
+del /A:H %list1%.csv %list2%.csv test_list11.csv test_list22.csv test_new.csv
 pause
 exit
 
@@ -27,19 +34,15 @@ for /f "skip=1 delims=" %%# in (%1) do (
     for /f "tokens=2-7 delims=," %%b in (^"!tpl!^") do (
         REM exhibit parsed token selectivity
         echo %%b,%%d,%%e,%%f,%%g >> %2
-    ) || (
-        echo Error Reading File Found &Exit /b 1
     )
 )
 exit /b
 
 :extract
-for /f "skip=1 tokens=1 delims=," %%a in (%1) do (
+for /f %3 %%a in (%1) do (
     REM token selectivity for unique id column
     REM at position 1 - after reformat subroutine
     echo %%a >> %2
-) || (
-    echo Error Reading File Found &Exit /b 1
 )
 exit /b
 
