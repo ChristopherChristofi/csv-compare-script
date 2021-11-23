@@ -1,5 +1,6 @@
 @echo off
 Setlocal EnableDelayedExpansion
+set "edit_doc=edit_data"
 set "_new2=nwmerge"
 set "_work2=olmerge"
 set "new_doc=new"
@@ -7,36 +8,37 @@ set "_merge=updated"
 set "comp_doc=complete"
 set "_uid1=idlist1"
 set "_uid2=idlist2"
-type nul > %_work2%.csv && attrib +h %_work2%.csv
-REM read of fixed file containing changes to be merged
-REM with new dataset file
-for /f %%a in ('dir /b *.csv') do (
-    REM prevent processing of output
-    if %%a neq %_work2%.csv ( if %%a neq %new_doc%.csv (
-        call :reformat %%a , %_work2%.csv
-    ))
-)
-type nul > %_merge%.csv && attrib +h %_merge%.csv
-type nul > %_new2%.csv && attrib +h %_new2%.csv
-type nul > %_uid1%.csv && attrib +h %_uid1%.csv
-type nul > %_uid2%.csv && attrib +h %_uid2%.csv
-call :reformat %new_doc%.csv , %_new2%.csv
-for /f "tokens=1-5 delims=," %%a in (%_new2%.csv) do (
-    for /f "tokens=1-5 delims=," %%f in (%_work2%.csv) do (
-        if %%a equ %%f ( echo %%a,%%b,%%c,%%d,%%j >> %_merge%.csv ))
-) || (
-    echo Error in File Read and Comparing Datasets &Exit /b 1
-)
+if exist %edit_doc%.csv (
+    type nul > %_work2%.csv && attrib +h %_work2%.csv
+    call :reformat %edit_doc%.csv , %_work2%.csv
+) else (( echo File Error: %edit_doc%.csv not found ) && pause &exit /b 1 )
+if exist %new_doc%.csv (
+    type nul > %_merge%.csv && attrib +h %_merge%.csv
+    type nul > %_new2%.csv && attrib +h %_new2%.csv
+    call :reformat %new_doc%.csv , %_new2%.csv
+    for /f "tokens=1-5 delims=," %%a in (%_new2%.csv) do (
+        for /f "tokens=1-5 delims=," %%f in (%_work2%.csv) do (
+            if %%a equ %%f ( echo %%a,%%b,%%c,%%d,%%j >> %_merge%.csv ))
+    )
+) else (( echo File Error: %new_doc%.csv not found ) && del /A:H %_work2%.csv && pause &exit /b 1 )
 REM subroutine calls to extract uinque id list comparatives
-call :extract %_new2%.csv %_uid1%.csv
-call :extract %_merge%.csv %_uid2%.csv
-REM comparison method to filter differences
-for /f %%a in ('type %_uid1%.csv ^| find /i "cod" /c') do set ln_cnt=%%a
-for /f %%a in ('fc /lb %ln_cnt% %_uid1%.csv %_uid2%.csv ^| find /i "cod"') do (
-    for /f "tokens=1-5 delims=," %%b in (%_new2%.csv) do (
-        if %%a equ %%b ( echo %%b,%%c,%%d,%%e,%%f >> %_merge%.csv ))
-) || (
-    echo Error in File Read and Comparing Datasets &Exit /b 1
+if exist %_merge%.csv ( if exist %_new2%.csv (
+    type nul > %_uid1%.csv && attrib +h %_uid1%.csv
+    type nul > %_uid2%.csv && attrib +h %_uid2%.csv
+    call :extract %_new2%.csv %_uid1%.csv
+    call :extract %_merge%.csv %_uid2%.csv
+    REM comparison method to filter differences. tuples that are not found in generated merging doc
+    REM compared against all occuring new doc, are added to the generated new doc
+    for /f %%a in ('type %_uid1%.csv ^| find /i "cod" /c') do set ln_cnt=%%a
+    for /f %%a in ('fc /lb %ln_cnt% %_uid1%.csv %_uid2%.csv ^| find /i "cod"') do (
+        for /f "tokens=1-5 delims=," %%b in (%_new2%.csv) do (
+            if %%a equ %%b ( echo %%b,%%c,%%d,%%e,%%f >> %_merge%.csv ))
+    )
+)) else (
+    ( echo Processing Error: temporary file structures not found )
+    if exist %_new2%.csv ( del /A:H %_new2%.csv )
+    if exist %_merge%.csv ( del /A:H %_merge%.csv )
+    del /A:H %_uid1%.csv %_uid2%.csv %_work2%.csv
 )
 type nul > %comp_doc%.csv
 echo uid,datetime,text,num, > %comp_doc%.csv
