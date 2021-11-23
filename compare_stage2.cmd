@@ -24,11 +24,11 @@ if exist %new_doc%.csv (
     call :reformat_fixed %new_doc%.csv , %_new2%.csv , 2 , 7
     for /f "tokens=1-5 delims=," %%a in (%_new2%.csv) do (
         for /f "tokens=1-5 delims=," %%f in (%_work2%.csv) do (
-            if %%a equ %%f ( echo %%a,%%b,%%c,%%d,%%j >> %_merge%.csv ))
+            if %%a equ %%f ( echo %%a,%%c,%%d,%%e,%%j >> %_merge%.csv ))
     )
 ) else (
     ( echo File Error: %new_doc%.csv not found. )
-    del /A:H %_merge%.csv %_new2%.csv %_work2%.csv
+    del /A:H %_work2%.csv
     pause &exit /b 1
 )
 REM subroutine calls to extract uinque id list comparatives
@@ -48,7 +48,8 @@ if exist %_new2%.csv ( if exist %_merge%.csv (
     ( echo Processing Error: temporary file structures not found )
     if exist %_new2%.csv ( del /A:H %_new2%.csv )
     if exist %_merge%.csv ( del /A:H %_merge%.csv )
-    del /A:H %_uid1%.csv %_uid2%.csv %_work2%.csv
+    del /A:H %_work2%.csv
+    pause &exit /b 1
 )
 type nul > %comp_doc2%.csv
 echo uid,datetime,text,num, > %comp_doc2%.csv
